@@ -6,18 +6,15 @@
 
 ![](https://img.onl/AFXDs)
 
-**自動推播:**
-當程式開始執行後，Linbot會自動傳給用戶歡迎的訊息:
-
 ## state介紹
 
-1. MenuState :
+1. UserState :
 在這個state用戶可以輸入指令(1)help 查詢指令 (2)chat 跟chatGPT聊天 (3) search 爬蟲圖片
 
 2. chatGPT state :
 在這個state可以跟chatGTP聊天 如圖:
 
-![](https://imgur.com/a/jmRAtnZ)
+![](https://img.onl/E4kOZ2)
 
 我是利用註冊openai拿到token以後就可以自由跟他對話了，只要把返回的message送到line bot即可。
 以下是我的部分程式碼：
@@ -36,7 +33,7 @@ def on_enter_chatGPTresponse(self, event):
 3. search state :
 只要輸入的字句以.jpg做結尾，機器人呼叫google的api幫忙爬蟲，但是免費的帳號最多一個月只能爬蟲100次:
 
-![](https://imgur.com/a/sulAALm)
+![](https://img.onl/gpXCe2)
 
 以下是我的程式碼:
 
@@ -83,7 +80,7 @@ def on_enter_searchresult(self, event):
 4. help state :
 當輸入help的話就會輸出提示訊息:
 
-![](https://imgur.com/a/DPe6qp0)
+![](https://img.onl/qSAHUx)
 
 有任何問題歡迎寄信到我的信箱詢問!
 email:f64096198@gs.ncku.edu.tw
