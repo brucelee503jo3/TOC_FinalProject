@@ -4,7 +4,7 @@
 
 **我的finite state machine diagram:**
 
-![](https://imgur.com/a/HpDXWiP)
+![](https://img.onl/AFXDs)
 
 **自動推播:**
 當程式開始執行後，Linbot會自動傳給用戶歡迎的訊息:
