@@ -14,23 +14,70 @@ load_dotenv()
 
 
 machine = TocMachine(
-    states=["user", "state1", "state2"],
+    states=["user", 
+            "chatGPT" , "chatGPTresponse" , "chatGPTexit" ,
+            "search"  , "searchresult"    , "searchexit",
+            "help" ],
     transitions=[
+        #chatGPT state
         {
             "trigger"    : "advance",
             "source"     : "user",
-            "dest"       : "state1",
-            "conditions" : "is_going_to_state1",
+            "dest"       : "chatGPT",
+            "conditions" : "is_going_to_chatGPT",
         },
         {
             "trigger"    : "advance",
-            "source"     : "user",
-            "dest"       : "state2",
-            "conditions" : "is_going_to_state2",
+            "source"     : "chatGPT",
+            "dest"       : "chatGPTexit",
+            "conditions" : "is_going_to_chatGPTexit",
         },
+        {
+            "trigger"    : "advance",
+            "source"     : "chatGPT",
+            "dest"       : "chatGPTresponse",
+            "conditions" : "is_going_to_chatGPTresponse",
+        },
+        {
+            "trigger"    : "go_back_chatGPT", 
+            "source"     : "chatGPTresponse", 
+            "dest"       : "chatGPT"
+        },
+        #google search state
+        {
+            "trigger"    : "advance",
+            "source"     : "user",
+            "dest"       : "search",
+            "conditions" : "is_going_to_search",
+        },
+        {
+            "trigger"    : "advance",
+            "source"     : "search",
+            "dest"       : "searchexit",
+            "conditions" : "is_going_to_searchexit",
+        },
+        {
+            "trigger"    : "advance",
+            "source"     : "search",
+            "dest"       : "searchresult",
+            "conditions" : "is_going_to_searchresult",
+        },
+        {
+            "trigger"    : "go_back_search", 
+            "source"     : "searchresult", 
+            "dest"       : "search"
+        },
+        #help state
+        {
+            "trigger"    : "advance",
+            "source"     : ["user" , "chatGPT" , "search"],
+            "dest"       : "help",
+            "conditions" : "is_going_to_help", 
+        },
+        #go back user
         {
             "trigger"    : "go_back", 
-            "source"     : ["state1", "state2"], 
+            "source"     : ["chatGPTexit","searchexit","help"],
             "dest"       : "user"
         },
     ],
@@ -107,11 +154,10 @@ def webhook_handler():
         print(f"\nFSM STATE: {machine.state}")
         print(f"REQUEST BODY: \n{body}")
         print(event.message.text)
-        print("terst")
         response = machine.advance(event)
-        print(response)
+        
         if response == False:
-            send_text_message(event.reply_token, "Not Entering any State")
+            send_text_message(event.reply_token, "很抱歉 沒有這項服務功能\n\n輸入chat 與chatGPT聊天\n輸入search 可以爬蟲所需圖片\n輸入help 查看所有指令")
 
     return "OK"
 
