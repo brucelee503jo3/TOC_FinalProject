@@ -1,159 +1,89 @@
-# TOC Project 2020
+# linebot introduction
 
-[![Maintainability](https://api.codeclimate.com/v1/badges/dc7fa47fcd809b99d087/maintainability)](https://codeclimate.com/github/NCKU-CCS/TOC-Project-2020/maintainability)
+我的linebot主要有兩個功能，一個是跟chatGPT聊天，一個是使用google API 來做圖片爬蟲。
 
-[![Known Vulnerabilities](https://snyk.io/test/github/NCKU-CCS/TOC-Project-2020/badge.svg)](https://snyk.io/test/github/NCKU-CCS/TOC-Project-2020)
+**我的finite state machine diagram:**
 
+![](https://imgur.com/a/HpDXWiP)
 
-Template Code for TOC Project 2020
+**自動推播:**
+當程式開始執行後，Linbot會自動傳給用戶歡迎的訊息:
 
-A Line bot based on a finite state machine
+## state介紹
 
-More details in the [Slides](https://hackmd.io/@TTW/ToC-2019-Project#) and [FAQ](https://hackmd.io/s/B1Xw7E8kN)
+1. MenuState :
+在這個state用戶可以輸入指令(1)help 查詢指令 (2)chat 跟chatGPT聊天 (3) search 爬蟲圖片
 
-## Setup
+2. chatGPT state :
+在這個state可以跟chatGTP聊天 如圖:
 
-### Prerequisite
-* Python 3.6
-* Pipenv
-* Facebook Page and App
-* HTTPS Server
+![](https://imgur.com/a/jmRAtnZ)
 
-#### Install Dependency
-```sh
-pip3 install pipenv
+我是利用註冊openai拿到token以後就可以自由跟他對話了，只要把返回的message送到line bot即可。
+以下是我的部分程式碼：
 
-pipenv --three
+```
+def on_enter_chatGPTresponse(self, event):
+        print("I'm entering ChatGPT response")
 
-pipenv install
-
-pipenv shell
+        text = event.message.text
+        response = self.api.send_message(text)
+        reply_token = event.reply_token
+        send_text_message(reply_token, response["message"])
+        self.go_back_chatGPT()
 ```
 
-* pygraphviz (For visualizing Finite State Machine)
-    * [Setup pygraphviz on Ubuntu](http://www.jianshu.com/p/a3da7ecc5303)
-	* [Note: macOS Install error](https://github.com/pygraphviz/pygraphviz/issues/100)
+3. search state :
+只要輸入的字句以.jpg做結尾，機器人呼叫google的api幫忙爬蟲，但是免費的帳號最多一個月只能爬蟲100次:
 
+![](https://imgur.com/a/sulAALm)
 
-#### Secret Data
-You should generate a `.env` file to set Environment Variables refer to our `.env.sample`.
-`LINE_CHANNEL_SECRET` and `LINE_CHANNEL_ACCESS_TOKEN` **MUST** be set to proper values.
-Otherwise, you might not be able to run your code.
+以下是我的程式碼:
 
-#### Run Locally
-You can either setup https server or using `ngrok` as a proxy.
+```
+def on_enter_searchresult(self, event):
+        reply_token = event.reply_token
+        get_message = event.message.text.rstrip()
 
-#### a. Ngrok installation
-* [ macOS, Windows, Linux](https://ngrok.com/download)
-
-or you can use Homebrew (MAC)
-```sh
-brew cask install ngrok
+        if get_message[-4:].lower() == '.jpg':
+            URL_list = []
+            try:
+                params = {
+                    "engine": "google",
+                    "tbm": "isch",
+                    "api_key": "01242d37e40d56a1db89f05b2a309e0bce05a48c1bca5d31cc94e573a162a937",
+                }
+                params['q'] = get_message
+                client = GoogleSearch(params)
+                data = client.get_dict()
+                imgs = data['images_results']
+                x = 0
+                for img in imgs:
+                    if x < 5:
+                        URL_list.append(img['original'])
+                        x += 1
+                print("success")
+            except:
+                url = 'https://www.google.com.tw/search?q=' + \
+                    get_message+'&tbm=isch'
+                request = requests.get(url=url)
+                html = request.content
+                bsObj = BeautifulSoup(html, 'html.parser')
+                content = bsObj.findAll('img', {'class': 't0fcAb'})
+                for i in content:
+                    URL_list.append(i['src'])
+        url = random.choice(URL_list)
+        print(url)
+        msg = ImageSendMessage(original_content_url=url, preview_image_url=url)
+        #print(msg)
+        send_image_url(reply_token , url)
+        self.go_back_search()
 ```
 
-**`ngrok` would be used in the following instruction**
+4. help state :
+當輸入help的話就會輸出提示訊息:
 
-```sh
-ngrok http 8000
-```
+![](https://imgur.com/a/DPe6qp0)
 
-After that, `ngrok` would generate a https URL.
-
-#### Run the sever
-
-```sh
-python3 app.py
-```
-
-#### b. Servo
-
-Or You can use [servo](http://serveo.net/) to expose local servers to the internet.
-
-
-## Finite State Machine
-![fsm](./img/show-fsm.png)
-
-## Usage
-The initial state is set to `user`.
-
-Every time `user` state is triggered to `advance` to another state, it will `go_back` to `user` state after the bot replies corresponding message.
-
-* user
-	* Input: "go to state1"
-		* Reply: "I'm entering state1"
-
-	* Input: "go to state2"
-		* Reply: "I'm entering state2"
-
-## Deploy
-Setting to deploy webhooks on Heroku.
-
-### Heroku CLI installation
-
-* [macOS, Windows](https://devcenter.heroku.com/articles/heroku-cli)
-
-or you can use Homebrew (MAC)
-```sh
-brew tap heroku/brew && brew install heroku
-```
-
-or you can use Snap (Ubuntu 16+)
-```sh
-sudo snap install --classic heroku
-```
-
-### Connect to Heroku
-
-1. Register Heroku: https://signup.heroku.com
-
-2. Create Heroku project from website
-
-3. CLI Login
-
-	`heroku login`
-
-### Upload project to Heroku
-
-1. Add local project to Heroku project
-
-	heroku git:remote -a {HEROKU_APP_NAME}
-
-2. Upload project
-
-	```
-	git add .
-	git commit -m "Add code"
-	git push -f heroku master
-	```
-
-3. Set Environment - Line Messaging API Secret Keys
-
-	```
-	heroku config:set LINE_CHANNEL_SECRET=your_line_channel_secret
-	heroku config:set LINE_CHANNEL_ACCESS_TOKEN=your_line_channel_access_token
-	```
-
-4. Your Project is now running on Heroku!
-
-	url: `{HEROKU_APP_NAME}.herokuapp.com/callback`
-
-	debug command: `heroku logs --tail --app {HEROKU_APP_NAME}`
-
-5. If fail with `pygraphviz` install errors
-
-	run commands below can solve the problems
-	```
-	heroku buildpacks:set heroku/python
-	heroku buildpacks:add --index 1 heroku-community/apt
-	```
-
-	refference: https://hackmd.io/@ccw/B1Xw7E8kN?type=view#Q2-如何在-Heroku-使用-pygraphviz
-
-## Reference
-[Pipenv](https://medium.com/@chihsuan/pipenv-更簡單-更快速的-python-套件管理工具-135a47e504f4) ❤️ [@chihsuan](https://github.com/chihsuan)
-
-[TOC-Project-2019](https://github.com/winonecheng/TOC-Project-2019) ❤️ [@winonecheng](https://github.com/winonecheng)
-
-Flask Architecture ❤️ [@Sirius207](https://github.com/Sirius207)
-
-[Line line-bot-sdk-python](https://github.com/line/line-bot-sdk-python/tree/master/examples/flask-echo)
+有任何問題歡迎寄信到我的信箱詢問!
+email:f64096198@gs.ncku.edu.tw
